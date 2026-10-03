@@ -1,0 +1,1 @@
+.favorites-page{padding:20px 16px 48px}.favorites-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.error-msg{background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;margin-bottom:16px}@media(max-width:900px){.favorites-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.favorites-grid{grid-template-columns:1fr}}

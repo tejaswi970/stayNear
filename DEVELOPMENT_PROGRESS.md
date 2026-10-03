@@ -1,0 +1,28 @@
+# StayNear Development Progress
+
+PHASE 1 - Foundation: COMPLETE
+PHASE 2 - Database: COMPLETE (schema.sql + seed.sql)
+PHASE 3 - Auth: COMPLETE (register, login, JWT, roles, protected routes)
+PHASE 4 - PG CRUD: COMPLETE (backend controllers + routes)
+PHASE 5 - Search & Filters: COMPLETE (PGSearch with sidebar + pagination)
+PHASE 6 - Tenant Features: COMPLETE (favorites, compare, true cost, report, StayBot)
+PHASE 7 - Owner Dashboard: COMPLETE (add/edit/delete PG, image upload)
+PHASE 8 - Admin Dashboard: COMPLETE (stats, listings, verify, reports, users)
+PHASE 9 - StayBot AI: COMPLETE (Gemini backend, grounded DB results)
+PHASE 10 - UI Polish: COMPLETE (responsive CSS, loading/error/empty states)
+
+## Build Status
+Frontend: PASSING (129 modules, 0 errors)
+Backend: READY (all routes, middleware, controllers present)
+
+## To Run
+1. Set up Supabase: run database/schema.sql then database/seed.sql
+2. Create pg-images bucket in Supabase Storage (public)
+3. Fill in backend/.env with real keys
+4. Terminal 1: cd backend && npm run dev
+5. Terminal 2: cd frontend && npm run dev
+
+## Demo credentials (password: password)
+- admin@staynear.com (admin)
+- ramesh@example.com (owner)
+- ankit@example.com (tenant)

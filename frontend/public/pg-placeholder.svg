@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <rect width="800" height="520" fill="#eef2ff"/>
+  <path d="M150 400h500V215L400 90 150 215z" fill="#c7d2fe"/>
+  <path d="M210 400V240h380v160" fill="#fff"/>
+  <path d="M350 400V285h100v115M245 265h75v70h-75zm235 0h75v70h-75z" fill="#818cf8"/>
+  <text x="400" y="458" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#4f46e5">Illustrative PG image</text>
+</svg>
