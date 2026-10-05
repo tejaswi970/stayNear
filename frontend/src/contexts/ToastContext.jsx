@@ -13,6 +13,14 @@ export function ToastProvider({ children }) {
     }, duration);
   }, []);
 
+  React.useEffect(() => {
+    const handleNotification = event => {
+      if (event.detail?.message) showToast(event.detail.message, event.detail.type || 'info', 7000);
+    };
+    window.addEventListener('staynear:notification', handleNotification);
+    return () => window.removeEventListener('staynear:notification', handleNotification);
+  }, [showToast]);
+
   const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);

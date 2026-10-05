@@ -61,7 +61,7 @@ function OwnerListings() {
                   <td>{l.location}</td>
                   <td>₹{Number(l.rent).toLocaleString("en-IN")}/mo</td>
                   <td>{l.room_type}</td>
-                  <td>{`${l.room_counts?.available ?? 0} ${(l.room_counts?.available ?? 0) === 1 ? "room" : "rooms"} available`}</td>
+                  <td>{Object.entries(l.room_counts?.room_type_counts || {}).map(([type, counts]) => `${counts.available} ${type} ${counts.available === 1 ? "room" : "rooms"} available`).join(" · ") || `${l.room_counts?.available ?? 0} rooms available`}</td>
                   <td>
                     <span className={"badge " + ({available:"badge-success",few_rooms:"badge-warning",full:"badge-danger"}[l.availability]||"badge-gray")}>
                       {l.availability}

@@ -170,6 +170,14 @@ function PGDetail() {
 
   const amenities = pg.amenities || {};
   const roomCoverImages = pg.rooms?.flatMap(room => room.images || []) || [];
+  const roomTypeCounts = (pg.rooms || []).reduce((counts, room) => {
+    const item = counts[room.room_type] || { total: 0, available: 0, booked: 0 };
+    item.total += 1;
+    if (room.status === "available") item.available += 1;
+    if (["booked", "sold"].includes(room.status)) item.booked += 1;
+    counts[room.room_type] = item;
+    return counts;
+  }, {});
   const hasActualPhotos = !!(pg.images?.length || roomCoverImages.length);
   const images = pg.images?.length ? pg.images : roomCoverImages.length ? roomCoverImages : [pg.rooms?.length ? "/room-placeholder.svg" : "/pg-placeholder.svg"];
   const selectableRooms = (pg.rooms || []).filter((room, index, all) => room.status === "available" && all.findIndex(item => item.status === "available" && item.room_type === room.room_type && Number(item.monthly_rent_inr) === Number(room.monthly_rent_inr)) === index);
@@ -226,6 +234,7 @@ function PGDetail() {
             {pg.rooms_setup_required ? <div className="error-msg">Room inventory is not configured yet. Apply `database/room_booking.sql` in Supabase, then reload the page.</div> : pg.rooms?.length > 0 ? <section className="pgdetail-amenities">
               <h3>Room Availability</h3>
               <p>{pg.room_counts?.available ?? 0} {(pg.room_counts?.available ?? 0) === 1 ? "room" : "rooms"} available · {pg.room_counts?.booked ?? 0} booked</p>
+              <div className="amenities-grid" style={{marginBottom:12}}>{Object.entries(roomTypeCounts).map(([type, counts]) => <div className="amenity-item" key={type}><strong>{counts.available}</strong> {type} {counts.available === 1 ? "room" : "rooms"} available</div>)}</div>
               <div className="amenities-grid">{pg.rooms.map(room => <div className="amenity-item" key={room.id} style={{display:"block"}}>Room {room.room_number} · {room.room_type} · ₹{Number(room.monthly_rent_inr).toLocaleString("en-IN")}/mo · {room.status}<div style={{display:"flex",gap:8,overflowX:"auto",marginTop:8}}>{room.images?.length ? room.images.map((url, photoIndex) => <img key={`${room.id}-${photoIndex}`} src={url} alt={`Room ${room.room_number}`} loading="lazy" style={{width:150,height:100,objectFit:"cover",borderRadius:6}} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = "/room-placeholder.svg"; }} />) : <img src="/room-placeholder.svg" alt="Sample room image; the owner has not uploaded room photos" style={{width:150,height:100,objectFit:"cover",borderRadius:6}} />}</div></div>)}</div>
             </section> : <section className="pgdetail-amenities"><h3>Room Availability</h3><p>No rooms have been added to this listing yet.</p></section>}
 

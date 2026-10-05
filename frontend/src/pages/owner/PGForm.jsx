@@ -32,6 +32,8 @@ function PGForm({ initial, pgId, onSuccess }) {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [pendingPreviews, setPendingPreviews] = useState([]);
   const [roomPhotoFiles, setRoomPhotoFiles] = useState({});
+  const [bulkRoomType, setBulkRoomType] = useState(form.room_type);
+  const [bulkRoomCount, setBulkRoomCount] = useState(1);
   const { showToast } = useToast();
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -42,7 +44,30 @@ function PGForm({ initial, pgId, onSuccess }) {
     if (pgId) api.get("/pgs/" + pgId + "/upi-qr").then(r => setForm(current => ({ ...current, upi_qr_path: r.data.data.path, upi_qr_url: r.data.data.url }))).catch(err => showToast(err.message, "error"));
   }, [pgId]);
 
-  const addRoom = () => setRooms(current => [...current, { room_number: String(current.length + 1), room_type: form.room_type, monthly_rent_inr: form.rent || "", deposit_inr: form.deposit || "", status: "available" }]);
+  const addRoom = () => setRooms(current => {
+    const numbers = new Set(current.map(room => String(room.room_number).trim()));
+    let number = 1;
+    while (numbers.has(String(number))) number += 1;
+    return [...current, { room_number: String(number), room_type: form.room_type, monthly_rent_inr: form.rent || "", deposit_inr: form.deposit || "", status: "available" }];
+  });
+  const addRoomBatch = () => {
+    const count = Math.floor(Number(bulkRoomCount));
+    if (!Number.isFinite(count) || count < 1 || count > 500) {
+      showToast("Choose a room count between 1 and 500.", "error");
+      return;
+    }
+    const numbers = new Set(rooms.map(room => String(room.room_number).trim()));
+    const newRooms = [];
+    let number = 1;
+    while (newRooms.length < count) {
+      while (numbers.has(String(number))) number += 1;
+      numbers.add(String(number));
+      newRooms.push({ room_number: String(number), room_type: bulkRoomType, monthly_rent_inr: form.rent || "", deposit_inr: form.deposit || "", status: "available" });
+      number += 1;
+    }
+    setRooms(current => [...current, ...newRooms]);
+    showToast(`Added ${count} ${bulkRoomType} room(s). Set room-specific prices below if needed.`, "success");
+  };
   const updateRoom = (index, key, value) => setRooms(current => current.map((room, i) => i === index ? { ...room, [key]: value } : room));
 
   const saveRoom = async room => {
@@ -260,6 +285,13 @@ function PGForm({ initial, pgId, onSuccess }) {
 
       <div className="form-section">
         <div className="form-section-title">Rooms</div>
+        <p className="form-help">Add a batch by sharing type and count. Each room stays individually bookable.</p>
+        <div className="pg-form-grid" style={{alignItems:"end",marginBottom:16}}>
+          <div className="form-group"><label className="form-label">Room Type</label><select className="form-select" value={bulkRoomType} onChange={event => setBulkRoomType(event.target.value)}><option value="single">Single</option><option value="2-sharing">2 Sharing</option><option value="3-sharing">3 Sharing</option><option value="4-sharing">4 Sharing</option></select></div>
+          <div className="form-group"><label className="form-label">Number of rooms to add</label><input className="form-input" type="number" min="1" max="500" value={bulkRoomCount} onChange={event => setBulkRoomCount(event.target.value)} /></div>
+          <button type="button" className="btn btn-outline" onClick={addRoomBatch}>+ Add {bulkRoomCount || 0} Rooms</button>
+        </div>
+        {rooms.length > 0 && <div className="form-help" style={{marginBottom:12}}><strong>Inventory by sharing type:</strong> {Object.entries(rooms.reduce((groups, room) => { const group = groups[room.room_type] || { total: 0, available: 0 }; group.total += 1; if (room.status === "available") group.available += 1; groups[room.room_type] = group; return groups; }, {})).map(([type, group]) => `${group.available} of ${group.total} ${type} rooms available`).join(" · ")}</div>}
         <p className="form-help">Each room is managed separately.</p>
         {rooms.map((room, index) => <div className="pg-form-grid" key={room.id || index} style={{marginBottom: 12}}>
           <div className="form-group"><label className="form-label">Room Number</label><input className="form-input" value={room.room_number} onChange={e => updateRoom(index, "room_number", e.target.value)} /></div>

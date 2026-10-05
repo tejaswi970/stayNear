@@ -9,6 +9,37 @@ function Navbar() {
   const { compareList } = useCompare();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
+
+  React.useEffect(() => {
+    if (user?.role !== "tenant") { setRequestCount(0); return undefined; }
+    let active = true;
+    const snapshotKey = `sn_request_status_${user.id}`;
+    const loadRequests = () => {
+      const token = localStorage.getItem("sn_token");
+      fetch(`${import.meta.env.VITE_API_URL || "/api"}/room-requests/my`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        .then(response => response.ok ? response.json() : Promise.reject(new Error("Could not load requests")))
+        .then(response => {
+          if (!active) return;
+          const requests = response.data || [];
+          setRequestCount(requests.length);
+          let previous = {};
+          try { previous = JSON.parse(localStorage.getItem(snapshotKey) || "{}"); } catch { previous = {}; }
+          requests.forEach(request => {
+            const oldStatus = previous[request.id];
+            if (!oldStatus || oldStatus === request.status) return;
+            const statusText = { confirmed: "confirmed your room booking", owner_rejected: "declined your room request", cancelled: "updated your room booking", expired: "let your room request expire" }[request.status];
+            if (statusText) window.dispatchEvent(new CustomEvent("staynear:notification", { detail: { message: `${request.pg?.name || "The owner"} ${statusText}. Open My Requests for details and chat.`, type: request.status === "confirmed" ? "success" : "info" } }));
+          });
+          localStorage.setItem(snapshotKey, JSON.stringify(Object.fromEntries(requests.map(request => [request.id, request.status]))));
+        }).catch(() => {});
+    };
+    loadRequests();
+    const timer = window.setInterval(loadRequests, 15000);
+    const onFocus = () => loadRequests();
+    window.addEventListener("focus", onFocus);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
+  }, [user?.id, user?.role]);
 
   const handleLogout = () => {
     logout();
@@ -46,6 +77,12 @@ function Navbar() {
           {isAuthenticated && !isOwner && !isAdmin && (
             <NavLink to="/favorites" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"} onClick={closeMenu}>
               Favorites
+            </NavLink>
+          )}
+
+          {user?.role === "tenant" && (
+            <NavLink to="/requests" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"} onClick={closeMenu}>
+              My Requests {requestCount > 0 && <span className="nav-badge nav-request-count" aria-label={`${requestCount} room requests`}>{requestCount > 99 ? "99+" : requestCount}</span>}
             </NavLink>
           )}
 

@@ -85,9 +85,9 @@ exports.getPGs = async (req, res, next) => {
     if (error) throw new AppError('Failed to fetch PG listings.', 500);
 
     const ids = (data || []).map(item => item.id);
-    let { data: roomRows, error: roomError } = ids.length ? await supabase.from('rooms').select('pg_id,status,images').in('pg_id', ids) : { data: [], error: null };
+    let { data: roomRows, error: roomError } = ids.length ? await supabase.from('rooms').select('pg_id,status,room_type,images').in('pg_id', ids) : { data: [], error: null };
     if (roomError && ['42703', 'PGRST204'].includes(roomError.code)) {
-      const fallback = ids.length ? await supabase.from('rooms').select('pg_id,status').in('pg_id', ids) : { data: [], error: null };
+      const fallback = ids.length ? await supabase.from('rooms').select('pg_id,status,room_type').in('pg_id', ids) : { data: [], error: null };
       roomRows = fallback.data;
       roomError = fallback.error;
     }
@@ -96,17 +96,22 @@ exports.getPGs = async (req, res, next) => {
     }
     const counts = new Map();
     for (const room of roomRows || []) {
-      const value = counts.get(room.pg_id) || { total: 0, available: 0, booked: 0, room_cover_image: null };
+      const value = counts.get(room.pg_id) || { total: 0, available: 0, booked: 0, room_cover_image: null, room_type_counts: {} };
       value.total += 1;
       if (room.status === 'available') value.available += 1;
       if (['booked','sold'].includes(room.status)) value.booked += 1;
+      const typeCounts = value.room_type_counts[room.room_type] || { total: 0, available: 0, booked: 0 };
+      typeCounts.total += 1;
+      if (room.status === 'available') typeCounts.available += 1;
+      if (['booked', 'sold'].includes(room.status)) typeCounts.booked += 1;
+      value.room_type_counts[room.room_type] = typeCounts;
       if (!value.room_cover_image && Array.isArray(room.images) && room.images.length) value.room_cover_image = room.images[0];
       counts.set(room.pg_id, value);
     }
     const listings = (data || []).map(item => {
-      const room_counts = counts.get(item.id) || { total: 0, available: 0, booked: 0, room_cover_image: null };
-      const { room_cover_image, ...countsOnly } = room_counts;
-      return { ...item, room_counts: countsOnly, room_cover_image, availability: countsOnly.available === 0 ? 'full' : countsOnly.available <= 2 ? 'few_rooms' : 'available' };
+      const room_counts = counts.get(item.id) || { total: 0, available: 0, booked: 0, room_cover_image: null, room_type_counts: {} };
+      const { room_cover_image, room_type_counts, ...countsOnly } = room_counts;
+      return { ...item, room_counts: countsOnly, room_type_counts, room_cover_image, availability: countsOnly.available === 0 ? 'full' : countsOnly.available <= 2 ? 'few_rooms' : 'available' };
     });
 
     res.json({
@@ -312,22 +317,28 @@ exports.getOwnerPGs = async (req, res, next) => {
     if (error) throw new AppError('Failed to fetch your listings.', 500);
 
     const ids = (data || []).map(item => item.id);
-    const { data: roomRows, error: roomError } = ids.length ? await supabase.from('rooms').select('pg_id,status').in('pg_id', ids) : { data: [], error: null };
+    const { data: roomRows, error: roomError } = ids.length ? await supabase.from('rooms').select('pg_id,status,room_type').in('pg_id', ids) : { data: [], error: null };
     if (roomError && !['42P01', 'PGRST205'].includes(roomError.code)) {
       console.error('Owner room counts query failed:', roomError.code, roomError.message);
       throw new AppError(`Failed to fetch room counts: ${roomError.message}`, 500);
     }
     const counts = new Map();
     for (const room of roomRows || []) {
-      const value = counts.get(room.pg_id) || { total: 0, available: 0, booked: 0 };
+      const value = counts.get(room.pg_id) || { total: 0, available: 0, booked: 0, room_type_counts: {} };
       value.total += 1;
       if (room.status === 'available') value.available += 1;
       if (['booked', 'sold'].includes(room.status)) value.booked += 1;
+      const typeCounts = value.room_type_counts[room.room_type] || { total: 0, available: 0, booked: 0 };
+      typeCounts.total += 1;
+      if (room.status === 'available') typeCounts.available += 1;
+      if (['booked', 'sold'].includes(room.status)) typeCounts.booked += 1;
+      value.room_type_counts[room.room_type] = typeCounts;
       counts.set(room.pg_id, value);
     }
     const listings = (data || []).map(item => {
       const room_counts = counts.get(item.id);
-      return room_counts ? { ...item, room_counts, availability: room_counts.available === 0 ? 'full' : room_counts.available <= 2 ? 'few_rooms' : 'available' } : { ...item, room_counts: { total: 0, available: 0, booked: 0 } };
+      const countsForListing = room_counts || { total: 0, available: 0, booked: 0, room_type_counts: {} };
+      return { ...item, room_counts: countsForListing, availability: countsForListing.available === 0 ? 'full' : countsForListing.available <= 2 ? 'few_rooms' : 'available' };
     });
     res.json({ success: true, data: listings });
   } catch (err) {

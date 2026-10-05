@@ -85,18 +85,18 @@ exports.transition = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const getConfirmedParticipantRequest = async (requestId, actorId) => {
+const getChatParticipantRequest = async (requestId, actorId) => {
   const { data: request, error } = await supabase.from('room_requests')
     .select('id,user_id,owner_id,status').eq('id', requestId).single();
   if (error || !request) throw new AppError('Room request not found.', 404);
   if (![request.user_id, request.owner_id].includes(actorId)) throw new AppError('You cannot access this conversation.', 403);
-  if (request.status !== 'confirmed') throw new AppError('Chat is available after the owner confirms the booking.', 403);
+  if (!['pending', 'owner_accepted', 'confirmed'].includes(request.status)) throw new AppError('Chat is available while this room request is active.', 403);
   return request;
 };
 
 exports.getMessages = async (req, res, next) => {
   try {
-    await getConfirmedParticipantRequest(req.params.id, req.user.id);
+    await getChatParticipantRequest(req.params.id, req.user.id);
     const { data, error } = await supabase.from('room_request_messages')
       .select('id,request_id,sender_id,content,created_at')
       .eq('request_id', req.params.id).order('created_at', { ascending: true }).limit(500);
@@ -107,7 +107,7 @@ exports.getMessages = async (req, res, next) => {
 
 exports.sendMessage = async (req, res, next) => {
   try {
-    await getConfirmedParticipantRequest(req.params.id, req.user.id);
+    await getChatParticipantRequest(req.params.id, req.user.id);
     const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
     if (!content || content.length > 2000) throw new AppError('Message must be between 1 and 2000 characters.', 400);
     const { data, error } = await supabase.from('room_request_messages')

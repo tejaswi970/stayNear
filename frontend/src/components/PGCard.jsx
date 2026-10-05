@@ -11,6 +11,7 @@ function PGCard({ pg, onFavorite, isFavorited, onCompare, isCompared, canCompare
     few_rooms: { cls: "badge-warning", label: "Few Rooms" },
     full: { cls: "badge-danger", label: "Full" },
   }[pg.availability] || { cls: "badge-gray", label: pg.availability };
+  const roomTypeSummary = Object.entries(pg.room_type_counts || {}).map(([type, counts]) => `${counts.available} ${type} ${counts.available === 1 ? "room" : "rooms"} available`);
 
   const handleFav = e => {
     e.preventDefault();
@@ -47,6 +48,7 @@ function PGCard({ pg, onFavorite, isFavorited, onCompare, isCompared, canCompare
           <span className="pg-card-rent">₹{Number(pg.rent).toLocaleString("en-IN")}/mo</span>
           <span className="pg-card-room">{pg.room_type}</span>
         </div>
+        {roomTypeSummary.length > 0 && <p style={{fontSize:12,color:"var(--gray-600)"}}><strong>By type:</strong> {roomTypeSummary.join(" · ")}</p>}
         <div className="pg-card-amenities">
           {amenities.wifi && <span className="amenity-tag">WiFi</span>}
           {amenities.food && <span className="amenity-tag">Food</span>}
